@@ -5,7 +5,7 @@ close all;
 rho = 2700;
 L = 10;
 EE = 68.9e9;
-mu = 0.001; 
+mu = 10; 
 sigma_y = 276e6;
 P = 10000;
 
@@ -24,9 +24,9 @@ h = @(b,h,t1,t2) [h - 1; 0.1 - h; -0.5 + (L.^3.*P)./(3.*EE.*((b.*h.^3)./12 - ((h
 
 %% Newtons Method
 
-x_k = [0.5;0.5;0.015;0.015];
+x_k_NM = [0.5;0.5;0.015;0.015];
 
-x_k_vec(:,1) = x_k;
+x_k_vec_NM(:,1) = x_k_NM;
 
 tol_for_problem = 10^-6;
 epsilon_a = 1000;
@@ -34,35 +34,35 @@ epsilon_a = 1000;
 k = 0;
 
 while epsilon_a > tol_for_problem
-    H_k1_phi = hessian(x_k(1),x_k(2),x_k(3),x_k(4));
+    H_k1_phi = hessian(x_k_NM(1),x_k_NM(2),x_k_NM(3),x_k_NM(4));
 
-    subtracted_k1 = H_k1_phi\grad(x_k(1),x_k(2),x_k(3),x_k(4));
+    subtracted_k1_NM = H_k1_phi\grad(x_k_NM(1),x_k_NM(2),x_k_NM(3),x_k_NM(4));
 
-    alpha = 1;
+    alpha_NM = 1;
 
-    while any(h(x_k(1) - alpha*subtracted_k1(1), x_k(2) - alpha*subtracted_k1(2), x_k(3) - alpha*subtracted_k1(3), x_k(4) - alpha*subtracted_k1(4)) > 0)
-        alpha = alpha * 0.5;
+    while any(h(x_k_NM(1) - alpha_NM*subtracted_k1_NM(1), x_k_NM(2) - alpha_NM*subtracted_k1_NM(2), x_k_NM(3) - alpha_NM*subtracted_k1_NM(3), x_k_NM(4) - alpha_NM*subtracted_k1_NM(4)) > 0)
+        alpha_NM = alpha_NM * 0.5;
     end
-    x_k1 = x_k - alpha * subtracted_k1;
+    x_k1_NM = x_k_NM - alpha_NM * subtracted_k1_NM;
 
-    epsilon_a = norm((x_k1 - x_k))/norm(x_k1);
-    x_k = x_k1;
-    x_k_vec(:,k+2) = x_k;
+    epsilon_a = norm((x_k1_NM - x_k_NM))/norm(x_k1_NM);
+    x_k_NM = x_k1_NM;
+    x_k_vec_NM(:,k+2) = x_k_NM;
     k = k + 1;
 end
 
 
-x_k(:,end);
+x_k_NM(:,end);
 
-fprintf('b = %4.2f, h = %4.2f, t_1 = %4.2f, t_2 = %4.2f using Newtons Method \n', x_k(1), x_k(2), x_k(3), x_k(4));
+fprintf('b = %4.2f, h = %4.2f, t_1 = %4.2f, t_2 = %4.2f using Newtons Method \n', x_k_NM(1), x_k_NM(2), x_k_NM(3), x_k_NM(4));
 
 %% BB Method
 
-x_k0 = [0.5;0.5;0.015;0.015];
-x_k1 = [0.8;0.6;0.05;0.05];
+x_k0_BB = [0.11;0.11;0.011;0.011];
+x_k1_BB = [0.8;0.8;0.011;0.011];
 
-x_k_vec(:,1) = x_k0;
-x_k_vec(:,2) = x_k1;
+x_k_vec_BB(:,1) = x_k0_BB;
+x_k_vec_BB(:,2) = x_k1_BB;
 
 tol_for_problem = 10^-6;
 epsilon_a = 1000;
@@ -70,31 +70,29 @@ epsilon_a = 1000;
 k = 1;
 
 while epsilon_a > tol_for_problem
-    x_k_2 = x_k_vec(:,k);
-    x_k_1 = x_k_vec(:,k+1);
-    norm_val = norm(grad(x_k_1(1),x_k_1(2),x_k_1(3),x_k_1(4)) - grad(x_k_1(1),x_k_1(2),x_k_1(3),x_k_1(4)))^2;
-    grad_sub_val = grad(x_k_1(1),x_k_1(2),x_k_1(3),x_k_1(4)) - grad(x_k_1(1),x_k_1(2),x_k_1(3),x_k_1(4));
+    x_k_2_BB = x_k_vec_BB(:,k);
+    x_k_1_BB = x_k_vec_BB(:,k+1);
+    norm_val = norm(grad(x_k_1_BB(1),x_k_1_BB(2),x_k_1_BB(3),x_k_1_BB(4)) - grad(x_k_2_BB(1),x_k_2_BB(2),x_k_2_BB(3),x_k_2_BB(4)))^2;
+    grad_sub_val = grad(x_k_1_BB(1),x_k_1_BB(2),x_k_1_BB(3),x_k_1_BB(4)) - grad(x_k_2_BB(1),x_k_2_BB(2),x_k_2_BB(3),x_k_2_BB(4));
     
-    alpha_k1 = abs((x_k_1 - x_k_2)'*grad_sub_val)/norm_val;
+    
+    alpha_k1 = ((x_k_1_BB - x_k_2_BB)' * grad_sub_val) /    norm_val;
+    subtracted_k1_BB = alpha_k1 * grad(x_k_1_BB(1),x_k_1_BB(2),x_k_1_BB(3),x_k_1_BB(4));
 
-    subtracted_k1 = alpha_k1*grad(x_k_1(1),x_k_1(2),x_k_1(3),x_k_1(4));
+    alpha_BB = 1;
 
-    alpha = 1;
-
-    while any(h(x_k_vec(1,k+1) - alpha*subtracted_k1(1), x_k_vec(2,k+1) - alpha*subtracted_k1(2), x_k_vec(3,k+1) - alpha*subtracted_k1(3), x_k_vec(4,k+1) - alpha*subtracted_k1(4)) > 0)
-        alpha = alpha * 0.5;
+    while any(h(x_k_vec_BB(1,k+1) - alpha_BB*subtracted_k1_BB(1), x_k_vec_BB(2,k+1) - alpha_BB*subtracted_k1_BB(2), x_k_vec_BB(3,k+1) - alpha_BB*subtracted_k1_BB(3), x_k_vec_BB(4,k+1) - alpha_BB*subtracted_k1_BB(4)) > 0)
+        alpha_BB = alpha_BB * 0.5;
     end
-    x_k_vec(:,k+2) =  x_k_vec(:,k+1) - alpha * subtracted_k1;
+    x_k_vec_BB(:,k+2) =  x_k_vec_BB(:,k+1) - alpha_BB * subtracted_k1_BB;
 
 
-    epsilon_a = norm((x_k_vec(:,k+2) - x_k_vec(:,k+1))/norm(x_k_vec(:,k+2)));
+    epsilon_a = norm((x_k_vec_BB(:,k+2) - x_k_vec_BB(:,k+1))/norm(x_k_vec_BB(:,k+2)));
     k = k + 1;
 end
 
 
-x_k(:,end);
-
-fprintf('b = %4.2f, h = %4.2f, t_1 = %4.2f, t_2 = %4.2f using BB Method \n', x_k(1), x_k(2), x_k(3), x_k(4));
+fprintf('b = %4.2f, h = %4.2f, t_1 = %4.2f, t_2 = %4.2f using BB Method \n', x_k_vec_BB(1,end),  x_k_vec_BB(2,end), x_k_vec_BB(3,end),  x_k_vec_BB(4,end));
 
 
 function phi_eq = phi_func(b,h,t1,t2,rho,L,EE,mu,sigma_y,P)
