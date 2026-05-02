@@ -100,7 +100,9 @@ J_h = @(x) [J_h_1(x);
 gradL = @(x,lambda) gradf(x) + J_h(x)'*lambda;
 
 %% Initializing SQP solver:
-x0 = [0.5; 0.5; 0.1; 0.1]; % initial guess for sizing
+%x0 = [0.5; 0.5; 0.1; 0.1]; % initial guess for sizing
+
+x0 = [0.51; 0.51; 0.051; 0.051]; % other initial guess
 lambda0 = zeros(10,1); % initial guess of Lagrange Mulitipliers
 HessMat0 = eye(length(x0)); % initial guess for Hessian Matrix
 solTol = 1e-6; % solution tolerance
@@ -141,21 +143,21 @@ for k = 1:maxIter % begin loop
     lambda_new = lambda_out.ineqlin;
 
     % Advice from Dr. Wang - use a small step size along the calculated step direction
-    % alpha = 0.44; % tune this to provide a suitable solution - should really be a line search   
-    alpha = 1.0;
+    alpha = 0.44; % tune this to provide a suitable solution - should really be a line search   
+    % alpha = 1.0;
     x_new = x_current + alpha*dvStep;
-    maxLS_iter = 75;
-    LS_iter = 0;
-    while any(h(x_new) > 0) && LS_iter < maxLS_iter % this is outside the feasible region
-        alpha = alpha*0.5;
-        x_new = x_current  + alpha*dvStep; % Update the guess again
-        LS_iter = LS_iter + 1;
-        if LS_iter   == maxLS_iter
-            disp('Line search did not converge within max iterations.')
-        else
-            % nothing
-        end
-    end
+    % maxLS_iter = 75;
+    % LS_iter = 0;
+    % while any(h(x_new) > 0) && LS_iter < maxLS_iter % this is outside the feasible region
+    %     alpha = alpha*0.5;
+    %     x_new = x_current  + alpha*dvStep; % Update the guess again
+    %     LS_iter = LS_iter + 1;
+    %     if LS_iter   == maxLS_iter
+    %         disp('Line search did not converge within max iterations.')
+    %     else
+    %         % nothing
+    %     end
+    % end
      
     % Update the Hessian using BFGS (Based on Algorithm 6.5 from Heath)
     y_current = gradL(x_new, lambda_new) - gradL(x_current, lambda_new); % Gradient difference
