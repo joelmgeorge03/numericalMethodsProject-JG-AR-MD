@@ -51,7 +51,51 @@ options = optimoptions('fmincon','Algorithm','interior-point','SpecifyObjectiveG
     'SpecifyConstraintGradient',false,'MaxIterations',200,'OptimalityTolerance',1e-6,'Display','iter-detailed');
 [x,fval]=fmincon(@(x) beam(x, rho, L), x0, A, b, Aeq, beq, lb, ub, @(x) constraints(x,P,L,EE,sigma_y), options);
 
+% Plot cross-section using optimized x and display mass (fval)
+b = x(1);
+h = x(2);
+t1 = x(3);
+t2 = x(4);
 
+figure;
+hold on;
+axis equal;
+xlabel('Width (m)');
+ylabel('Height (m)');
+title(sprintf('Optimized Cross-Section (mass = %.6g kg)', fval));
+
+% Outer rectangle (centered at origin lower-left at (0,0))
+outer_x = [0, b, b, 0, 0];
+outer_y = [0, 0, h, h, 0];
+plot(outer_x, outer_y, 'k-', 'LineWidth', 2);
+
+% Inner hollow rectangle coordinates (offset by thicknesses)
+inner_x = [t2, b-t2, b-t2, t2, t2];
+inner_y = [t1, t1, h-t1, h-t1, t1];
+
+% If inner dimensions valid, plot hole
+if (b-2*t2 > 0) && (h-2*t1 > 0)
+    plot(inner_x, inner_y, 'k-', 'LineWidth', 2);
+    % Fill cross-section area between outer and inner
+    % Create polygon for outer minus inner by using patch with hole via patch + 'faces' not trivial;
+    % Instead fill outer then overlay inner with background color to simulate hollow
+    patch(outer_x, outer_y, [0.8 0.9 1], 'EdgeColor','none');
+    patch(inner_x, inner_y, 'w', 'EdgeColor','none');
+else
+    % Solid section (no hole)
+    patch(outer_x, outer_y, [0.8 0.9 1], 'EdgeColor','none');
+end
+
+% Draw thickness markers
+plot([t2 t2], [0 h], 'r--');
+plot([b-t2 b-t2], [0 h], 'r--');
+plot([0 b], [t1 t1], 'r--');
+plot([0 b], [h-t1 h-t1], 'r--');
+
+%legend('Outer','Inner','Location','bestoutside');
+xlim([-0.05, b+0.05]);
+ylim([-0.05, h+0.05]);
+hold off;
 
 %%
 %Function Definitions
