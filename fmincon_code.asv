@@ -20,7 +20,7 @@
 % 
 % %Equations
 % 
-% A= @(b,h,t1,t2) ((h*b)-(h-2*t1)*(b-2*t2)); %Cross Sectional Area
+% A= @(b,h,t1,t2) ((h*b)-(h-2*t1)*(b*2*t2)); %Cross Sectional Area
 % 
 % f = @(b,h,t1,t2) rho.*L.*A;
 % 
@@ -33,23 +33,17 @@
 clear
 close all
 clc
-rho = 2700; %density
-L = 10; %total beam length
-EE = 68.9e9; %Young's Modulus of material
-sigma_y = 276e6; %yield strength of the material
-P = -50000; %Applied tip load
-
 nonlcon = @constraints;
 A = [];
 b = [];
 Aeq = [];
 beq = [];
-lb = [0.1, 0.1, 0.01, 0.01];
-ub = [1, 1, 0.25, 0.25];
-x0 = [.2, .2, 0.05, 0.05];
+lb = [0.01, 0.05, 0.005, 0.005 ];
+ub = [0.5, 0.5, 0.05, 0.05];
+x0 = [1, 1, 0.2, 0.2];
 options = optimoptions('fmincon','Algorithm','interior-point','SpecifyObjectiveGradient',false, ...
     'SpecifyConstraintGradient',false,'MaxIterations',200,'OptimalityTolerance',1e-6,'Display','iter-detailed');
-[x,fval]=fmincon(@(x) beam(x, rho, L), x0, A, b, Aeq, beq, lb, ub, @(x) constraints(x,P,L,EE,sigma_y), options);
+[x,fval] = fmincon(F,x0,A,b,Aeq,beq,lb,ub,nonlcon,options)
 
 
 
@@ -63,15 +57,15 @@ h=x(2);
 t1=x(3);
 t2=x(4);
 
-A=(b*h)-(b-2*t2)*(h-2*t1); %Cross Sectional Area
+A=((h*b)-(h-2*t1)*(b*2*t2)); %Cross Sectional Area
 
-F = rho*L*A;
+F = rho.*L.*A;
 
 end
 
 %%
 %Constraints
-function [c,ceq] = constraints(x,P,L,EE,sigma_y)
+function [c,ceq] = constraints(x,P,L,E,sigma_y)
 
 b=x(1);
 h=x(2);
@@ -82,22 +76,6 @@ delta_L= (P*L^3) / ( 3*EE* ( ( (1/12)*b*h^3 ) -( (1/12)*(b-2*t2)*((h-2*t1)^3) ) 
 
 sigma_max= -(P*L*(h/2)) / ( ((1/12)*b*h^3)-((1/12)*(b-2*t2)*(h-2*t1)^3) );
 
-delta_max=0.5;
-
-c=zeros(6,1);
-
-c(1)=sigma_max-(sigma_y/1.5);
-
-c(2)=-delta_L-delta_max;
-
-c(3)=2*t2-b;
-
-c(4)=2*t1-h;
-
-c(5)=-t1;
-
-c(6)=-t2;
-
-ceq=[];
+c=zeros()
 
 end
