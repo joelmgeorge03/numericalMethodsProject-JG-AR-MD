@@ -44,7 +44,7 @@ h5 = @(x) 0.01 - x(3);
 h6 = @(x) x(3) - 0.25;
 h7 = @(x) 0.01 - x(4);
 h8 = @(x) x(4) - 0.25;
-h9 = @(x) (P_applied*L_beam^3)/( 3*E_beam*( (1/12)*x(1)*x(2)^3 - (1/12)*(x(1) - 2*x(4))*(x(2) - 2*x(3))^3 ) ) - 0.5;
+h9 = @(x) -(P_applied*L_beam^3)/( 3*E_beam*( (1/12)*x(1)*x(2)^3 - (1/12)*(x(1) - 2*x(4))*(x(2) - 2*x(3))^3 ) ) - 0.5;
 h10 = @(x) -(P_applied*L_beam*x(2)/2)/(( (1/12)*x(1)*x(2)^3 - (1/12)*(x(1) - 2*x(4))*(x(2) - 2*x(3))^3 ) ) - sigma_yield/1.5;
 
 h = @(x) [h1(x); 
@@ -74,7 +74,7 @@ J_h_8 = @(x) [0 0 0 1];
 % 2 Nonlinear Constraints (Max Tip Deflection & Max Bending Stress)
 denom = @(x) ( x(1)*x(3)*( 3*x(2)^2 - 6*x(2)*x(3) + 4*x(3)^2 ) + ( x(2) - 2*x(3) )^3*x(4) )^2;
 
-J_h_9 = @(x) (1/(E_beam*denom(x)))*[2*L_beam^3*P_applied*x(3)*(3*x(2)^2 - 6*x(2)*x(3) + 4*x(3)^2), ...
+J_h_9 = @(x) -(1/(E_beam*denom(x)))*[2*L_beam^3*P_applied*x(3)*(3*x(2)^2 - 6*x(2)*x(3) + 4*x(3)^2), ...
      6*L_beam^3*P_applied*( 2*x(1)*x(3)*( x(2) - x(3)) + (x(2)-2*x(3))^2*x(4) ), ...
      6*L_beam^3*P_applied*(x(2) - 2*x(3))^2*(x(1) - 2*x(4)), ...
      2*L_beam^3*P_applied*(x(2) - 2*x(3))^3];
@@ -100,7 +100,8 @@ J_h = @(x) [J_h_1(x);
 gradL = @(x,lambda) gradf(x) + J_h(x)'*lambda;
 
 %% Initializing SQP solver:
-x0 = [0.5; 0.5; 0.1; 0.1]; % initial guess for sizing
+%x0 = [0.5; 0.5; 0.1; 0.1]; % initial guess for sizing
+x0 = [0.51; 0.51; 0.051; 0.051]; % other initial guess
 lambda0 = zeros(10,1); % initial guess of Lagrange Mulitipliers
 HessMat0 = eye(length(x0)); % initial guess for Hessian Matrix
 solTol = 1e-6; % solution tolerance
@@ -141,21 +142,24 @@ for k = 1:maxIter % begin loop
     lambda_new = lambda_out.ineqlin;
 
     % Advice from Dr. Wang - use a small step size along the calculated step direction
-    % alpha = 0.44; % tune this to provide a suitable solution - should really be a line search   
-    alpha = 1.0;
+    alpha = 0.44; % tune this to provide a suitable solution - should really be a line search   
     x_new = x_current + alpha*dvStep;
-    maxLS_iter = 75;
-    LS_iter = 0;
-    while any(h(x_new) > 0) && LS_iter < maxLS_iter % this is outside the feasible region
-        alpha = alpha*0.5;
-        x_new = x_current  + alpha*dvStep; % Update the guess again
-        LS_iter = LS_iter + 1;
-        if LS_iter   == maxLS_iter
-            disp('Line search did not converge within max iterations.')
-        else
-            % nothing
-        end
-    end
+
+    % Similar Feasibility Check as HW8's Barrier Method
+    % alpha = 1.0;
+    % x_new = x_current + alpha*dvStep;
+    % maxLS_iter = 75;
+    % LS_iter = 0;
+    % while any(h(x_new) > 0) && LS_iter < maxLS_iter % this is outside the feasible region
+    %     alpha = alpha*0.5;
+    %     x_new = x_current  + alpha*dvStep; % Update the guess again
+    %     LS_iter = LS_iter + 1;
+    %     if LS_iter   == maxLS_iter
+    %         disp('Line search did not converge within max iterations.')
+    %     else
+    %         % nothing
+    %     end
+    % end
      
     % Update the Hessian using BFGS (Based on Algorithm 6.5 from Heath)
     y_current = gradL(x_new, lambda_new) - gradL(x_current, lambda_new); % Gradient difference
@@ -191,9 +195,8 @@ for k = 1:maxIter % begin loop
 
 end
 
-figure(Theme="light")
-
 % Plotting the history of design variable values and objective function
+figure(Theme="light")
 subplot(2,1,1);
 plot(history.iter, history.objval, '-o', 'LineWidth',2);
 grid minor
