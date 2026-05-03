@@ -37,7 +37,6 @@ gradf = matlabFunction(gradf_sym, 'Vars', {x_sym});
 
 % Constraint Vector
 Izz_sym = (1/12)*(x_sym(1)*x_sym(2)^3) - (1/12)*( (x_sym(1) - 2*x_sym(4) )*( x_sym(2) - 2*x_sym(3) )^3);
-
 h_sym = [0.1 - x_sym(1); 
          x_sym(1) - 1;
          0.1 - x_sym(2); 
@@ -76,9 +75,6 @@ x_current = x0; % set initial guess for design variables
 lambda_current = lambda0; % set initial guess for Lagrange Multipliers
 HessMat = HessMat0; % set initial guess for the Hessian of the Lagrangian (this gets updated using BFGS)
 
-numDVs = length(x_current);
-numCons = length(lambda_current);
-
 history.dv_vals = [];
 history.objval = [];
 history.activeCons = cell(1,maxIter);
@@ -101,7 +97,7 @@ for k = 1:maxIter % begin loop
     b_quadprog = -h_current; % pass in linearized inequality constraints
     
     % Solve the QP subproblem using quadprog
-    [dvStep, ~, exitflag, output, lambda_out] = quadprog(H_quadprog, f_quadprog, A_quadprog, b_quadprog, [], [], [], [], x0_quadprog, qp_options);
+    [dvStep, ~, ~, output, lambda_out] = quadprog(H_quadprog, f_quadprog, A_quadprog, b_quadprog, [], [], [], [], x0_quadprog, qp_options);
     lambda_new = lambda_out.ineqlin;
 
     % Advice from Dr. Wang - use a small step size along the calculated step direction
