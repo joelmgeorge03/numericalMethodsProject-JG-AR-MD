@@ -133,7 +133,7 @@ for k = 1:maxIter % begin loop
     % The active set handling is currently not correct. No considerations
     % are being made for the other inactive ineqaulity constraints. 
 
-    % This code will implement a from-scratch active set method
+    % This code will try to implement a from-scratch active set method.
 
 
     % Find the active constraints

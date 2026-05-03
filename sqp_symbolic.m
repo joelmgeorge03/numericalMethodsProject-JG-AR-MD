@@ -15,7 +15,7 @@ clear; clc; close all;
 % Geometry Inputs:
 L_beam = 10; % cantilevered beam length, meters
 
-% Material Properties (Al-6061 T6) from: https://asm.matweb.com/search/specificmaterial.asp?bassnum=ma6061t6
+% Material Properties (Al-6061 T6)
 rho_beam = 2700; % density, kg/m^3
 E_beam = 68.9e9; % Young's Modulus, Pa
 sigma_yield = 276e6; % Tensile Yield Strength, Pa
@@ -25,84 +25,46 @@ nu_beam = 0.33; % Poisson's Ratio
 P_applied = -50000; % applied Tip Load, Newtons
 
 %% Defining Governing Equations:
+x_sym = sym('x', [4 1]);
 
 % Objective Function
-f = @(x) rho_beam*L_beam*( (x(1))*(x(2)) - (x(1) - 2*x(4))*(x(2) - 2*x(3)) );
+f_sym = rho_beam*L_beam*( (x_sym(1))*(x_sym(2)) - (x_sym(1) - 2*x_sym(4))*(x_sym(2) - 2*x_sym(3)) );
+f = matlabFunction(f_sym, 'Vars', {x_sym});
 
-% Gradient of Objective Function
-gradf = @(x) [2*L_beam*rho_beam*x(3);
-              2*L_beam*rho_beam*x(4);
-              2*L_beam*rho_beam*(x(1) - 2*x(4));
-              2*L_beam*rho_beam*(x(2) - 2*x(3));]; 
+% Gradient of Objective
+gradf_sym =  gradient(f_sym, x_sym);
+gradf = matlabFunction(gradf_sym, 'Vars', {x_sym});
 
-% Constraint Vector - derived by hand
-h1 = @(x) 0.1 - x(1);
-h2 = @(x) x(1) - 1;
-h3 = @(x) 0.1 - x(2);
-h4 = @(x) x(2) - 1;
-h5 = @(x) 0.01 - x(3);
-h6 = @(x) x(3) - 0.25;
-h7 = @(x) 0.01 - x(4);
-h8 = @(x) x(4) - 0.25;
-h9 = @(x) (P_applied*L_beam^3)/( 3*E_beam*( (1/12)*x(1)*x(2)^3 - (1/12)*(x(1) - 2*x(4))*(x(2) - 2*x(3))^3 ) ) - 0.5;
-h10 = @(x) -(P_applied*L_beam*x(2)/2)/(( (1/12)*x(1)*x(2)^3 - (1/12)*(x(1) - 2*x(4))*(x(2) - 2*x(3))^3 ) ) - sigma_yield/1.5;
+% Constraint Vector
+Izz_sym = (1/12)*(x_sym(1)*x_sym(2)^3) - (1/12)*( (x_sym(1) - 2*x_sym(4) )*( x_sym(2) - 2*x_sym(3) )^3);
 
-h = @(x) [h1(x); 
-          h2(x);
-          h3(x);
-          h4(x);
-          h5(x);
-          h6(x);
-          h7(x);
-          h8(x);
-          h9(x);
-          h10(x)];
+h_sym = [0.1 - x_sym(1); 
+         x_sym(1) - 1;
+         0.1 - x_sym(2); 
+         x_sym(2) - 1;
+         0.01 - x_sym(3);
+         x_sym(3) - 0.25;
+         0.01 - x_sym(4);
+         x_sym(4) - 0.25;
+         -(P_applied*L_beam^3)/(3*E_beam*Izz_sym) - 0.5;
+         -1.5*(P_applied*L_beam*x_sym(2)/2)/(Izz_sym) - sigma_yield];
+h = matlabFunction(h_sym, 'Vars', {x_sym});
 
+% Constraint Jacobian
+J_h_sym = jacobian(h_sym, x_sym);
+J_h = matlabFunction(J_h_sym, 'Vars', {x_sym});   
 
-%% Constraint Jacobian - derived in Mathematica
+% Formulate Lagrange Multipliers and Lagrangian
+lambda_sym = sym('lambda', [10 1]);
+L_sym = f_sym + lambda_sym.' * h_sym;
 
-% 8 Linear Constraints (min and max beam cross-section dimensions)
-J_h_1 = @(x) [-1 0 0 0];
-J_h_2 = @(x) [1 0 0 0];
-J_h_3 = @(x) [0 -1 0 0];
-J_h_4 = @(x) [0 1 0 0];
-J_h_5 = @(x) [0 0 -1 0];
-J_h_6 = @(x) [0 0 1 0];
-J_h_7 = @(x) [0 0 0 -1];
-J_h_8 = @(x) [0 0 0 1];
+% Gradient of Lagrangian
+gradL_sym = gradient(L_sym, x_sym);
+gradL = matlabFunction(gradL_sym, 'Vars', {x_sym, lambda_sym});
 
-% 2 Nonlinear Constraints (Max Tip Deflection & Max Bending Stress)
-denom = @(x) ( x(1)*x(3)*( 3*x(2)^2 - 6*x(2)*x(3) + 4*x(3)^2 ) + ( x(2) - 2*x(3) )^3*x(4) )^2;
-
-J_h_9 = @(x) (1/(E_beam*denom(x)))*[2*L_beam^3*P_applied*x(3)*(3*x(2)^2 - 6*x(2)*x(3) + 4*x(3)^2), ...
-     6*L_beam^3*P_applied*( 2*x(1)*x(3)*( x(2) - x(3)) + (x(2)-2*x(3))^2*x(4) ), ...
-     6*L_beam^3*P_applied*(x(2) - 2*x(3))^2*(x(1) - 2*x(4)), ...
-     2*L_beam^3*P_applied*(x(2) - 2*x(3))^3];
-
-J_h_10 = @(x) (1/(denom(x)))*[3*L_beam*P_applied*x(2)*x(3)*(3*x(2)^2 - 6*x(2)*x(3) + 4*x(3)^2), ...
-     3*L_beam*P_applied*(x(1)*(3*x(2)^2*x(3) - 4*x(3)^3) + 2*(x(2) - 2*x(3))^2*(x(2) + x(3))*x(4)), ...
-     9*L_beam*P_applied*x(2)*(x(2) - 2*x(3))^2*(x(1) - 2*x(4)), ...
-     3*L_beam*P_applied*x(2)*(x(2) - 2*x(3))^3];
-
-% Combining all components into single vector
-J_h = @(x) [J_h_1(x); 
-            J_h_2(x); 
-            J_h_3(x); 
-            J_h_4(x); 
-            J_h_5(x); 
-            J_h_6(x); 
-            J_h_7(x); 
-            J_h_8(x); 
-            J_h_9(x); 
-            J_h_10(x)];
-
-% Gradient of Lagrangian (for BFGS update)
-gradL = @(x,lambda) gradf(x) + J_h(x)'*lambda;
 
 %% Initializing SQP solver:
-%x0 = [0.5; 0.5; 0.1; 0.1]; % initial guess for sizing
-
-x0 = [0.51; 0.51; 0.051; 0.051]; % other initial guess
+x0 = [0.5; 0.5; 0.1; 0.1]; % initial guess for sizing
 lambda0 = zeros(10,1); % initial guess of Lagrange Mulitipliers
 HessMat0 = eye(length(x0)); % initial guess for Hessian Matrix
 solTol = 1e-6; % solution tolerance
@@ -132,11 +94,11 @@ for k = 1:maxIter % begin loop
     J_h_current = J_h(x_current);
     
     % Setup for quadprog
-    x0_quadprog = zeros(length(x_current), 1);
-    H_quadprog = (HessMat + HessMat')/2;
-    f_quadprog = gradf_current;
-    A_quadprog = J_h_current;
-    b_quadprog = -h_current;
+    x0_quadprog = zeros(length(x_current), 1); % start with 0 
+    H_quadprog = (HessMat + HessMat')/2; % ensure the Hessian is symmetric
+    f_quadprog = gradf_current; % pass in linear objective term
+    A_quadprog = J_h_current; % pass in linearized inequality constraints
+    b_quadprog = -h_current; % pass in linearized inequality constraints
     
     % Solve the QP subproblem using quadprog
     [dvStep, ~, exitflag, output, lambda_out] = quadprog(H_quadprog, f_quadprog, A_quadprog, b_quadprog, [], [], [], [], x0_quadprog, qp_options);
@@ -144,8 +106,12 @@ for k = 1:maxIter % begin loop
 
     % Advice from Dr. Wang - use a small step size along the calculated step direction
     alpha = 0.44; % tune this to provide a suitable solution - should really be a line search   
-    % alpha = 1.0;
+    % alpha = 1.0; % base case - produced weird results
     x_new = x_current + alpha*dvStep;
+
+    % Similar Feasibility Check as HW8's Barrier Method
+    % alpha = 1.0;
+    % x_new = x_current + alpha*dvStep;
     % maxLS_iter = 75;
     % LS_iter = 0;
     % while any(h(x_new) > 0) && LS_iter < maxLS_iter % this is outside the feasible region
@@ -160,10 +126,16 @@ for k = 1:maxIter % begin loop
     % end
      
     % Update the Hessian using BFGS (Based on Algorithm 6.5 from Heath)
-    y_current = gradL(x_new, lambda_new) - gradL(x_current, lambda_new); % Gradient difference
+    y_current = gradL(x_new, lambda_new) - gradL(x_current, lambda_current); % Gradient difference
     s_current = x_new - x_current; % Step difference
-    HessMat = HessMat + (y_current * y_current') / (y_current' * s_current) - (HessMat * (s_current * s_current') * HessMat) / (s_current' * HessMat * s_current);
-    
+
+    % BFGS Curvature Check
+    if y_current' * s_current > 1e-6
+        HessMat = HessMat + (y_current * y_current') / (y_current' * s_current) - (HessMat * (s_current * s_current') * HessMat) / (s_current' * HessMat * s_current);
+    else 
+        % keep the current Hessian since the curvature is negative
+    end 
+
     % Update design variable guess and Lagrange multiplier guess
     x_current = x_new; % update the design variables
     lambda_current = lambda_new; % update Lagrange Multipliers
@@ -193,30 +165,52 @@ for k = 1:maxIter % begin loop
 
 end
 
-figure(Theme="light")
-
 % Plotting the history of design variable values and objective function
-subplot(2,1,1);
+figure(Theme="light")
+sgtitle('Beam Optimization Convergence History','Interpreter','latex', 'FontWeight', 'bold')
+subplot(2,3,1);
 plot(history.iter, history.objval, '-o', 'LineWidth',2);
 grid minor
-xlabel('Iteration');
-ylabel('Objective Value (Beam Mass)');
-title('Objective Value Convergence');
+xlabel('Iteration','Interpreter','latex', 'FontWeight', 'bold');
+ylabel('Objective Value (Beam Mass)','Interpreter','latex', 'FontWeight', 'bold');
+title('Convergence History for Objective','Interpreter','latex', 'FontWeight', 'bold');
 
-subplot(2,1,2);
+subplot(2,3,3);
 plot(history.iter, history.dv_vals(1,:), '-o', 'LineWidth',2)
 hold on; grid minor
 plot(history.iter, history.dv_vals(2,:), '-o', 'LineWidth',2)
 plot(history.iter, history.dv_vals(3,:), '-o', 'LineWidth',2)
 plot(history.iter, history.dv_vals(4,:), '-o', 'LineWidth',2);
 
-yline(0.01, 'r--')
-yline(0.25, 'g--')
-yline(0.1, 'b--')
-yline(1, 'k--')
+yline(0.01, 'r--', 'LineWidth',1.5)
+yline(0.25, 'g--', 'LineWidth',1.5)
+yline(0.1, 'b--', 'LineWidth',1.5)
+yline(1, 'k--', 'LineWidth',1.5)
 
-xlabel('Iteration');
-ylabel('Design Variables');
+xlabel('Iteration','Interpreter','latex', 'FontWeight', 'bold');
+ylabel('Design Variables','Interpreter','latex', 'FontWeight', 'bold');
 ylim([-0.5 1.1])
-legend('DV1', 'DV2', 'DV3', 'DV4', 'Wall Thickness Lower Bound', 'Wall Thickness Upper Bound', 'Beam Width/Height Lower Bound', 'Beam Width/Height Upper Bound', 'Location','best');
-title('Design Variables Convergence');
+title('Convergence History of Design Variables','Interpreter','latex', 'FontWeight', 'bold');
+
+subplot(2,3,4)
+plot(history.iter, history.FoS, '-o', 'LineWidth',2)
+grid minor
+xlabel('Iteration','Interpreter','latex', 'FontWeight', 'bold');
+ylabel('Factor of Safety','Interpreter','latex', 'FontWeight', 'bold');
+yline(1.5, 'c--', 'LineWidth',1.5)
+title('Convergence History of Factor of Safety','Interpreter','latex', 'FontWeight', 'bold');
+
+subplot(2,3,6)
+plot(history.iter, history.tipDef, '-o', 'LineWidth',2)
+grid minor
+xlabel('Iteration','Interpreter','latex', 'FontWeight', 'bold');
+ylabel('Tip Deflection','Interpreter','latex', 'FontWeight', 'bold');
+yline(-0.5, 'm--', 'LineWidth',1.5)
+title('Convergence History of Tip Deflection','Interpreter','latex', 'FontWeight', 'bold');
+
+subplot(2,3,3)
+legend(["DV1: $b$", "DV2: $h$", "DV3: $t_{1}$", "DV4: $t_{2}$", "$t_1$, $t_{2}$ Lower Bound", "$t_1$, $t_{2}$ Upper Bound", "$b$ & $h$ Lower Bound", "$b$ & $h$ Upper Bound"], "Interpreter", "latex", "Location", "none", "Position", [0.4278 0.5577 0.1488, 0.1659])
+hLegend = findobj(gcf,"Type","legend");
+hLegend.Interpreter = "latex";
+hLegend.FontSize = 16;
+hLegend.FontWeight = 'bold';

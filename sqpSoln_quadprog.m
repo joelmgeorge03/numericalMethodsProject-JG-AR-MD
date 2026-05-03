@@ -162,9 +162,15 @@ for k = 1:maxIter % begin loop
     % end
      
     % Update the Hessian using BFGS (Based on Algorithm 6.5 from Heath)
-    y_current = gradL(x_new, lambda_new) - gradL(x_current, lambda_new); % Gradient difference
+    y_current = gradL(x_new, lambda_new) - gradL(x_current, lambda_current); % Gradient difference
     s_current = x_new - x_current; % Step difference
-    HessMat = HessMat + (y_current * y_current') / (y_current' * s_current) - (HessMat * (s_current * s_current') * HessMat) / (s_current' * HessMat * s_current);
+    
+    % BFGS Curvature Check
+    if y_current' * s_current > 1e-6
+        HessMat = HessMat + (y_current * y_current') / (y_current' * s_current) - (HessMat * (s_current * s_current') * HessMat) / (s_current' * HessMat * s_current);
+    else 
+        % keep the current Hessian 
+    end 
     
     % Update design variable guess and Lagrange multiplier guess
     x_current = x_new; % update the design variables
