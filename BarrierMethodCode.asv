@@ -51,9 +51,9 @@ h_vec    = matlabFunction(h_s,    'Vars', {b, h, t1, t2});
 for m = 1:length(mu_vec)
     mu_val = mu_vec(m);
     
-    x_k_NM = [0.51; 0.51; 0.051; 0.051];
+    %x_k_NM = [0.51; 0.51; 0.051; 0.051];
     %x_k_NM = [0.81; 0.81; 0.22; 0.22];
-    %x_k_NM = [0.31; 0.31; 0.05; 0.05];
+    x_k_NM = [0.31; 0.31; 0.05; 0.05];
     x_k_vec_NM(:,1) = x_k_NM;
     epsilon_a = 1000;
     tol_for_problem = 10^-6;
@@ -157,8 +157,9 @@ p4 = xline(0.05,LineStyle='--',LineWidth=2,Color='b');
 legend([p3 p4],{'Initial Barrier Solution: \mu = 0.1','Final Barrier Solution: \mu = 0.05'},FontSize=12);
 
 %% Mu plot vs k
-figure
+
 semilogx(mu_vec,k_vec,'-o','LineWidth',1.2)
+
 p3 = xline(0.1,LineStyle='--',LineWidth=2,Color='r');
 xlim([min(mu_vec), max(mu_vec)])
 p4 = xline(0.05,LineStyle='--',LineWidth=2,Color='b');
@@ -167,19 +168,6 @@ xlabel('\mu')
 grid on
 ylabel('Iterations (k)')
 legend([p3 p4],{'Initial Barrier Solution: \mu = 0.1','Final Barrier Solution: \mu = 0.05'},FontSize=12);
-
-
-figure
-semilogx(mu_vec,toc_vec,'-o','LineWidth',1.2)
-p3 = xline(0.1,LineStyle='--',LineWidth=2,Color='r');
-xlim([min(mu_vec), max(mu_vec)])
-p4 = xline(0.05,LineStyle='--',LineWidth=2,Color='b');
-title('Elapased Time at Different Values of \mu')
-xlabel('\mu')
-grid on
-ylabel('Time (s)')
-legend([p3 p4],{'Initial Barrier Solution: \mu = 0.1','Final Barrier Solution: \mu = 0.05'},FontSize=12);
-
 
 
 %% Plots
