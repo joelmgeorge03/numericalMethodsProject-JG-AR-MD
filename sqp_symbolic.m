@@ -231,3 +231,25 @@ disp(['t2: ', num2str(history.dv_vals(4,end)), ' meters.']);
 disp(['Beam Mass: ', num2str(history.objval(end)), ' kilograms.']);
 disp(['Elapsed Solver Time: ', num2str(tTotal), ' seconds.']);
 disp('=======================================================')
+
+%% Iteration and Elapased Time Plotting Code for SQP
+alpha_vec = [0.25,0.44,0.5,0.75,1];
+elapsed_time = [0.22666,0.16935,0.23508,0.13486,0.16912];
+iterations = [127,78,80,27,71];
+
+figure
+plot(alpha_vec,iterations,'-o','LineWidth',1.2)
+xlim([min(alpha_vec), max(alpha_vec)])
+title('Iterations at Different Values of \alpha')
+xlabel('\alpha')
+grid on
+ylabel('Iterations (k)')
+
+
+figure
+plot(alpha_vec,elapsed_time,'-o','LineWidth',1.2)
+xlim([min(alpha_vec), max(alpha_vec)])
+title('Elapased Time at Different Values of \alpha')
+xlabel('\alpha')
+grid on
+ylabel('Time (s)')
