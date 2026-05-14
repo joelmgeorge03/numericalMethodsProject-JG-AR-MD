@@ -46,11 +46,16 @@ Aeq = [];
 beq = [];
 lb = [0.1, 0.1, 0.01, 0.01];
 ub = [1, 1, 0.25, 0.25];
-x0 = [.2, .2, 0.05, 0.05];
+%x0 = [.2, .2, 0.05, 0.05];
+%x0 = [.5, .5, 0.15, 0.15];
+%x0 = [.75, .75, 0.1, 0.1];
+x0 = [.4, .9, 0.1, 0.05];
+
+tic
 options = optimoptions('fmincon','Algorithm','interior-point','SpecifyObjectiveGradient',false, ...
     'SpecifyConstraintGradient',false,'MaxIterations',200,'OptimalityTolerance',1e-6,'Display','iter-detailed');
 [x,fval]=fmincon(@(x) beam(x, rho, L), x0, A, b, Aeq, beq, lb, ub, @(x) constraints(x,P,L,EE,sigma_y), options);
-
+toc
 % Plot cross-section using optimized x and display mass (fval)
 b = x(1);
 h = x(2);
@@ -97,6 +102,24 @@ xlim([-0.05, b+0.05]);
 ylim([-0.05, h+0.05]);
 hold off;
 
+%initial guess vs elapsedtime
+xx=[1,2,3,4];
+time=[0.092240, 0.899203, 0.070523, 0.077619];
+iteration=[15, 138 22 12];
+
+figure;
+plot(xx, time, '-o','LineWidth',2);
+xlabel('Initial Guess Index');
+ylabel('Elapsed Time (s)');
+title('Initial Guess vs Elapsed Time');
+grid on;
+
+figure;
+plot(xx, iteration, 's-','LineWidth',2);
+xlabel('Initial Guess Index');
+ylabel('Iterations to Converge');
+title('Initial Guess vs Iterations');
+grid on;
 %%
 %Function Definitions
 
