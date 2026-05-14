@@ -12,7 +12,8 @@ clear; clc; close all;
 
 %% Model Geometry, Properties, and Loads
 
-tStart = tic; % start timing
+
+% timing varia
 
 % Geometry Inputs:
 L_beam = 10; % cantilevered beam length, meters
@@ -66,9 +67,6 @@ gradL = matlabFunction(gradL_sym, 'Vars', {x_sym, lambda_sym});
 
 %% Initializing SQP solver:
 x0 = [0.5; 0.5; 0.1; 0.1]; % initial guess for sizing
-%x0 = [0.4; 0.9; 0.1; 0.05]; 
-%x0 = [0.5; 0.5; 0.15; 0.15];
-
 lambda0 = zeros(10,1); % initial guess of Lagrange Mulitipliers
 HessMat0 = eye(length(x0)); % initial guess for Hessian Matrix
 solTol = 1e-6; % solution tolerance
@@ -106,7 +104,7 @@ for k = 1:maxIter % begin loop
     lambda_new = lambda_out.ineqlin;
 
     % Advice from Dr. Wang - use a small step size along the calculated step direction
-    alpha = 0.75; % tune this to provide a suitable solution - should really be a line search   
+    alpha = 0.44; % tune this to provide a suitable solution - should really be a line search   
     % alpha = 1.0; % base case - produced weird results
     x_new = x_current + alpha*dvStep;
 
@@ -166,8 +164,6 @@ for k = 1:maxIter % begin loop
 
 end
 
-tTotal = toc(tStart); % record the elapsed time since algorithm began
-
 % Plotting the history of design variable values and objective function
 figure(Theme="light")
 sgtitle('Beam Optimization Convergence History','Interpreter','latex', 'FontWeight', 'bold')
@@ -222,12 +218,12 @@ hLegend.FontWeight = 'bold';
 
 disp('=======================================================')
 disp('Constrained Optimization Results (SQP):');
-disp(['Iterations:', num2str(length(history.iter))]);
+disp('Iterations:');
+disp(length(history.iter));
 disp('Converged Design Variables:');
-disp(['b: ', num2str(history.dv_vals(1,end)), ' meters.']);
-disp(['h: ', num2str(history.dv_vals(2,end)), ' meters.']);
-disp(['t1: ', num2str(history.dv_vals(3,end)), ' meters.']);
-disp(['t2: ', num2str(history.dv_vals(4,end)), ' meters.']);
-disp(['Beam Mass: ', num2str(history.objval(end)), ' kilograms.']);
-disp(['Elapsed Solver Time: ', num2str(tTotal), ' seconds.']);
+disp('b:', num2str(history.dv_vals(1,end)));
+disp('h:', num2str(history.dv_vals(2,end)));
+disp('t1:', num2str(history.dv_vals(3,end)));
+disp('t2:', num2str(history.dv_vals(4,end)));
+disp(['Beam Mass: ', num2str(history.objval(end))]);
 disp('=======================================================')
